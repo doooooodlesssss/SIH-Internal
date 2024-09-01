@@ -1,17 +1,21 @@
-import React, { useState } from "react";
-import * as AppGeneral from "../socialcalc/index.js";
-import { File, Local } from "../Storage/LocalStorage";
-import { DATA } from "../../app-data.js";
-import { IonAlert, IonIcon } from "@ionic/react";
-import { add } from "ionicons/icons";
+import React, { useState } from 'react';
+import { View, TouchableOpacity, Alert } from 'react-native';
+import * as AppGeneral from '../socialCalc/index.js';
+import { File, Local } from '../Storage/LocalStorage';
+import { DATA } from '../../app-data.js';
+import AntDesign from '@expo/vector-icons/AntDesign';
 
-const NewFile: React.FC<{
+
+interface NewFileProps {
   file: string;
-  updateSelectedFile: Function;
   store: Local;
+  updateSelectedFile: (file: string) => void;
   billType: number;
-}> = (props) => {
+}
+
+const NewFile: React.FC<NewFileProps> = (props) => {
   const [showAlertNewFileCreated, setShowAlertNewFileCreated] = useState(false);
+
   const newFile = () => {
     if (props.file !== "default") {
       const content = encodeURIComponent(AppGeneral.getSpreadsheetContent());
@@ -26,33 +30,30 @@ const NewFile: React.FC<{
       props.store._saveFile(file);
       props.updateSelectedFile(props.file);
     }
-    const msc = DATA["home"][AppGeneral.getDeviceType()]["msc"];
+    const msc = (DATA as any)["home"][AppGeneral.getDeviceType()]["msc"];
     AppGeneral.viewFile("default", JSON.stringify(msc));
     props.updateSelectedFile("default");
     setShowAlertNewFileCreated(true);
   };
 
+  React.useEffect(() => {
+    if (showAlertNewFileCreated) {
+      Alert.alert(
+        "Alert Message",
+        "New file created!",
+        [
+          { text: "OK", onPress: () => setShowAlertNewFileCreated(false) }
+        ]
+      );
+    }
+  }, [showAlertNewFileCreated]);
+
   return (
-    <React.Fragment>
-      <IonIcon
-        icon={add}
-        slot="end"
-        className="ion-padding-end"
-        size="large"
-        onClick={() => {
-          newFile();
-          // console.log("New file clicked");
-        }}
-      />
-      <IonAlert
-        animated
-        isOpen={showAlertNewFileCreated}
-        onDidDismiss={() => setShowAlertNewFileCreated(false)}
-        header="Alert Message"
-        message={"New file created!"}
-        buttons={["Ok"]}
-      />
-    </React.Fragment>
+    <View>
+      <TouchableOpacity onPress={() => newFile()}>
+        <AntDesign name="addfile" size={30} color="#4F8EF7" style={{ marginRight: 10 }} />
+      </TouchableOpacity>
+    </View>
   );
 };
 

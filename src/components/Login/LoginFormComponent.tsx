@@ -1,66 +1,61 @@
-import { IonInput, IonList, IonItem, IonButton } from "@ionic/react";
-import React, { MouseEventHandler, useState } from "react";
+import React, { useState } from "react";
+import { View, TextInput, Button, StyleSheet } from "react-native";
 
 interface ComponentProps {
-  handleLogin: Function;
-  handleSignUp: Function;
+  handleLogin: (email: string, password: string) => void;
+  handleSignUp: (email: string, password: string) => void;
 }
 
 const LoginFormComponent: React.FC<ComponentProps> = ({
   handleLogin,
   handleSignUp,
 }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
 
   const updateValue = (
-    e: any,
-    setter: React.Dispatch<React.SetStateAction<any>>
+    e: string,
+    setter: React.Dispatch<React.SetStateAction<string>>
   ) => {
-    setter(e.target.value);
+    setter(e);
   };
 
   return (
-    <IonList>
-      <IonItem>
-        <IonInput
-          required
-          clearInput
-          inputMode="email"
-          pattern="email"
-          id="email"
-          value={email}
-          onIonChange={(e) => updateValue(e, setEmail)}
-          placeholder="Email.."
-        />
-      </IonItem>
-      <IonItem>
-        <IonInput
-          required
-          clearInput
-          pattern="password"
-          id="password"
-          value={password}
-          onIonChange={(e) => updateValue(e, setPassword)}
-          placeholder="Password.."
-        />
-      </IonItem>
-      <IonButton
-        expand="full"
-        className="ion-text-center"
-        onClick={() => handleLogin(email, password)}
-      >
-        Login
-      </IonButton>
-      <IonButton
-        expand="full"
-        className="ion-text-center"
-        onClick={() => handleSignUp(email, password)}
-      >
-        SignUp
-      </IonButton>
-    </IonList>
+    <View style={styles.container}>
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        value={email}
+        onChangeText={(text) => updateValue(text, setEmail)}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        value={password}
+        onChangeText={(text) => updateValue(text, setPassword)}
+        secureTextEntry={true}
+      />
+      <Button title="Login" onPress={() => handleLogin(email, password)} />
+      <Button title="Sign Up" onPress={() => handleSignUp(email, password)} />
+    </View>
   );
 };
 
+const styles = StyleSheet.create({
+  container: {
+    padding: 20,
+    justifyContent: "center",
+  },
+  input: {
+    height: 40,
+    borderColor: "gray",
+    borderWidth: 1,
+    marginBottom: 12,
+    paddingHorizontal: 10,
+  },
+});
+
 export default LoginFormComponent;
+

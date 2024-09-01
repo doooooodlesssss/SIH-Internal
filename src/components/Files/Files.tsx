@@ -1,203 +1,163 @@
-import React, { useState, useEffect } from "react";
-import "./Files.css";
-import * as AppGeneral from "../socialcalc/index.js";
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, FlatList, Modal, Alert, Button } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import useUser from '../../hooks/useUser';
+import { getFilesKeysFromFirestore, uploadFileToCloud, downloadFileFromFirebase, deleteFileFromFirebase } from '../../firebase/firestore';
+import * as AppGeneral from "../socialCalc/index.js";
 import { DATA } from "../../app-data.js";
-import { Local } from "../Storage/LocalStorage";
-import {
-  IonIcon,
-  IonModal,
-  IonItem,
-  IonButton,
-  IonList,
-  IonLabel,
-  IonAlert,
-  IonItemGroup,
-} from "@ionic/react";
-import {
-  fileTrayFull,
-  trash,
-  create,
-  cloudUpload,
-  cloudDownload,
-} from "ionicons/icons";
-import useUser from "../../hooks/useUser";
-import {
-  getFilesKeysFromFirestore,
-  uploadFileToCloud,
-  downloadFileFromFirebase,
-  deleteFileFromFirebase,
-} from "../../firebase/firestore";
 
-const Files: React.FC<{
-  store: Local;
-  file: string;
-  updateSelectedFile: Function;
-  updateBillType: Function;
-  filesFrom: "Local" | "Cloud";
-}> = (props) => {
-  const [modal, setModal] = useState(null);
+const Files = (props: any) => {
+  const [modalVisible, setModalVisible] = useState(false);
   const [listFiles, setListFiles] = useState(false);
   const [showAlert1, setShowAlert1] = useState(false);
   const [currentKey, setCurrentKey] = useState(null);
   const { user, isLoading } = useUser();
-
-  const editFile = (key) => {
-    props.store._getFile(key).then((data) => {
-      AppGeneral.viewFile(key, decodeURIComponent((data as any).content));
+  const editFile = (key: any) => {
+    props.store._getFile(key).then((data: any) => {
+      // AppGeneral.viewFile(key, decodeURIComponent((data as any).content));
       props.updateSelectedFile(key);
       props.updateBillType((data as any).billType);
     });
-    // console.log(JSON.stringify(data));
   };
-  const moveFileToCloud = (key) => {
-    props.store._getFile(key).then((fileData) => {
+
+  const moveFileToCloud = (key: any) => {
+    props.store._getFile(key).then((fileData: any) => {
       if (user) {
         uploadFileToCloud(user, fileData, () => {
-          alert("File Uploaded to Cloud");
+          Alert.alert('File Uploaded to Cloud');
           setListFiles(false);
         });
       } else {
-        alert("Login to Continue");
+        Alert.alert('Login to Continue');
         setListFiles(false);
       }
     });
   };
-
-  const deleteFile = (key) => {
+  
+  const deleteFile = (key: any) => {
     setShowAlert1(true);
     setCurrentKey(key);
   };
 
   const loadDefault = () => {
-    const msc = DATA["home"][AppGeneral.getDeviceType()]["msc"];
-    AppGeneral.viewFile("default", JSON.stringify(msc));
-    props.updateSelectedFile("default");
+    const msc = (DATA as any)['home'][AppGeneral.getDeviceType()]['msc'];
+    // AppGeneral.viewFile('default', JSON.stringify(msc));
+    props.updateSelectedFile('default');
   };
 
-  const _formatDate = (date) => {
+  const _formatDate = (date: any) => {
     return new Date(date).toLocaleString();
   };
 
   const temp = async () => {
-    let files;
-    if (props.filesFrom == "Local") {
+    let files: any;
+    if (props.filesFrom === 'Local') {
       files = await props.store._getAllFiles();
-    } else if (props.filesFrom == "Cloud") {
+    } else if (props.filesFrom === 'Cloud') {
       if (isLoading) return;
       if (!user) {
-        alert("Login to Continue");
+        Alert.alert('Login to Continue');
       } else {
         files = await getFilesKeysFromFirestore(user.uid);
       }
     }
     const fileList = Object.keys(files).map((key) => {
       return (
-        <IonItemGroup key={key}>
-          <IonItem>
-            <IonLabel>{key}</IonLabel>
-            {_formatDate(files[key])}
-            {props.filesFrom === "Local" && (
-              <IonIcon
-                icon={create}
-                color="warning"
-                slot="end"
-                size="large"
-                onClick={() => {
-                  setListFiles(false);
-                  editFile(key);
-                }}
-              />
+        <TouchableOpacity key={key} onPress={() => editFile(key)}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text>{key}</Text>
+            <Text>{_formatDate(files[key])}</Text>
+            {props.filesFrom === 'Local' && (
+              <Ionicons name="create" size={24} color="#4F8EF7" onPress={() => {
+                setListFiles(false);
+                editFile(key);
+              }}/>
             )}
-
-            <IonIcon
-              icon={props.filesFrom === "Local" ? cloudUpload : cloudDownload}
-              color="primary"
-              slot="end"
-              size="large"
-              onClick={() => {
-                if (props.filesFrom === "Local") moveFileToCloud(key);
-                else
-                  downloadFileFromFirebase(user.uid, key, () =>
-                    setListFiles(false)
-                  );
-              }}
-            />
-            <IonIcon
-              icon={trash}
-              color="danger"
-              slot="end"
-              size="large"
-              onClick={() => {
+            <Ionicons name={props.filesFrom === 'Local' ? 'cloud-upload' : 'cloud-download'} 
+                size={24} color="#4F8EF7" 
+                onPress={() => {
+                  if (props.filesFrom === 'Local') moveFileToCloud(key);
+                  else {
+                    if (user){
+                      downloadFileFromFirebase(user.uid, key, () => setListFiles(false))
+                    } else {
+                      Alert.alert('Login to Continue');
+                    }
+                  };
+              }} />
+            <Ionicons 
+              name="trash" 
+              size={24} 
+              color="black"
+              onPress={() => {
                 setListFiles(false);
                 deleteFile(key);
               }}
             />
-          </IonItem>
-        </IonItemGroup>
+          </View>
+        </TouchableOpacity>
       );
     });
 
     const ourModal = (
-      <IonModal isOpen={listFiles} onDidDismiss={() => setListFiles(false)}>
-        <IonList>{fileList}</IonList>
-        <IonButton
-          expand="block"
-          color="secondary"
-          onClick={() => {
-            setListFiles(false);
-          }}
-        >
-          Back
-        </IonButton>
-      </IonModal>
+      <Modal visible={listFiles} onRequestClose={() => setListFiles(false)}>
+        <FlatList
+          data={FileList as any}
+          renderItem={({ item }) => item}
+          keyExtractor={(item) => item.key}
+        />
+        <TouchableOpacity onPress={() => setListFiles(false)}>
+          <Text>Back</Text>
+        </TouchableOpacity>
+      </Modal>
     );
-    setModal(ourModal);
-  };
+      setModalVisible(true);
+    };
 
   useEffect(() => {
     temp();
   }, [listFiles]);
-
+  
   return (
-    <React.Fragment>
-      <IonIcon
-        icon={props.filesFrom == "Local" ? fileTrayFull : cloudDownload}
-        className="ion-padding-end"
-        slot="end"
-        size="large"
-        onClick={() => {
-          setListFiles(true);
-        }}
-      />
-      {modal}
-      <IonAlert
-        animated
-        isOpen={showAlert1}
-        onDidDismiss={() => setShowAlert1(false)}
-        header="Delete file"
-        message={"Do you want to delete the " + currentKey + " file?"}
-        buttons={[
-          { text: "No", role: "cancel" },
-          {
-            text: "Yes",
-            handler: () => {
-              if (props.filesFrom === "Local") {
-                props.store._deleteFile(currentKey);
-                loadDefault();
-                setCurrentKey(null);
-              } else {
-                deleteFileFromFirebase(user.uid, currentKey, () => {
-                  setListFiles(false);
+    <View>
+      <TouchableOpacity onPress={() => setListFiles(true)}>
+        <Ionicons name={props.filesFrom === 'Local' ? 'file-tray-full' : 'cloud-download'} 
+          size={24} 
+          color="#4F8EF7"
+        />
+      </TouchableOpacity>
+      {modalVisible && (
+        <Modal visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
+          {ourModal}
+        </Modal>
+      )}
+      {showAlert1 && (
+        <Alert
+          title="Delete file"
+          message={`Do you want to delete the ${currentKey} file?`}
+          buttons={[
+            { text: 'No', onPress: () => setShowAlert1(false) },
+            {
+              text: 'Yes',
+              onPress: () => {
+                if (props.filesFrom === 'Local') {
+                  props.store._deleteFile(currentKey);
                   loadDefault();
                   setCurrentKey(null);
-                });
-              }
+                } else {
+                  deleteFileFromFirebase(user.uid, currentKey, () => {
+                    setListFiles(false);
+                    loadDefault();
+                    setCurrentKey(null);
+                  });
+                }
+              },
             },
-          },
-        ]}
-      />
-    </React.Fragment>
+          ]}
+        />
+      )}
+    </View>
   );
 };
 
-export default Files;
+export default Files;            
